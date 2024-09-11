@@ -1,4 +1,18 @@
+import dataclasses
+import re
 import subprocess
+from dataclasses import dataclass
+from typing import Optional
+
+
+@dataclass
+class StressResult:
+    """Data class to store stress test results"""
+
+    op_rate:  Optional[float] = None
+    latency_mean: Optional[float] = None
+    latency_99th_percentile: Optional[float] = None
+    latency_max: Optional[float] = None
 
 
 class Runner:
@@ -16,8 +30,35 @@ class Runner:
         return result.stdout.decode()
 
 
+class Parser:
+    """Parser class for stress test results"""
+
+    def __init__(self, out):
+        self.out = out
+        self._sanitize()
+
+    def _sanitize(self):
+        """Removes unused part of output, leaves only Results"""
+        self.out = re.sub(r".*Results:", "Results:", self.out, flags=re.DOTALL)
+
+    def parse(self):
+        """
+        Parses output from stress test. Fields defined in `StressResult` are used as keys in regex
+        (underscores are swapped for spaces, to reflect real keys).
+        """
+        result = StressResult()
+        for field in dataclasses.fields(StressResult):
+            field_name = field.name.replace("_", " ")
+            value = re.search(rf"\n{field_name}\s*:\s*([\d,.]+)", self.out, re.IGNORECASE).group(1)
+            value = float(value.replace(",", ""))
+            setattr(result, field.name, value)
+
+        return result
+
+
 def main():
-    Runner.run("172.17.0.2")
+    stress_result = Runner.run("172.17.0.2")
+    Parser(stress_result).parse()
 
 
 if __name__ == "__main__":
