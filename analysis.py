@@ -1,3 +1,4 @@
+import concurrent.futures
 import statistics
 import threading
 from dataclasses import dataclass
@@ -21,6 +22,19 @@ class StressRun:
         return (self.end_time - self.start_time).total_seconds()
 
 
+def check_done(method):
+    """Checks if the analysis is completed before calling `method`"""
+
+    def wrapper(self, *args, **kwargs):
+        if not self.done:
+            raise ValueError(
+                f"Cannot compute {method.__name__} because results are not available."
+            )
+        return method(self, *args, **kwargs)
+
+    return wrapper
+
+
 lock = threading.Lock()
 
 
@@ -28,7 +42,6 @@ class StressAnalysis:
     """Class that analyse Cassandra Stress Test"""
 
     def __init__(self):
-        self.threads = []
         self.results = []
         self.done = False
 
@@ -50,50 +63,41 @@ class StressAnalysis:
             :param nproc: number of concurrent stress test runs
             :param process_runtime: specify the time to run, in seconds, minutes or hours
         """
-        for i in range(nproc):
-            t = threading.Thread(
-                target=self._start_test,
-                args=(
-                    node_ip,
-                    process_runtime[i],
-                ),
-            )
-            self.threads.append(t)
-            t.start()
 
-        [t.join() for t in self.threads]
+        with concurrent.futures.ThreadPoolExecutor(max_workers=nproc) as executor:
+            futures = [
+                executor.submit(self._start_test, node_ip, process_runtime[i])
+                for i in range(nproc)
+            ]
+
+            # Wait for all threads to complete and check for exceptions
+            for future in concurrent.futures.as_completed(futures):
+                try:
+                    future.result()  # Raises any exception thrown in the thread
+                except CalledProcessError as e:
+                    print(f"Exception occurred in one of the threads: {e}")
+                    raise
+
         self.done = True
 
     @property
+    @check_done
     def op_rate_sum(self):
-        if not self.done:
-            raise ValueError(
-                "Cannot compute op_rate_sum because results are not available."
-            )
         return sum(result.result.op_rate for result in self.results)
 
     @property
+    @check_done
     def avg_latency_mean(self):
-        if not self.done:
-            raise ValueError(
-                "Cannot compute avg_latency_mean because results are not available."
-            )
         return statistics.mean(result.result.latency_mean for result in self.results)
 
     @property
+    @check_done
     def avg_latency_99_percentile(self):
-        if not self.done:
-            raise ValueError(
-                "Cannot compute avg_latency_99_percentile because results are not available."
-            )
         return statistics.mean(
             result.result.latency_99th_percentile for result in self.results
         )
 
     @property
+    @check_done
     def stdev_latency_max(self):
-        if not self.done:
-            raise ValueError(
-                "Cannot compute stdev_latency_max because results are not available."
-            )
         return statistics.stdev(result.result.latency_max for result in self.results)

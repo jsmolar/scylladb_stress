@@ -33,22 +33,24 @@ def arg_parse():
 
 def main():
     arg = arg_parse()
-    anal = StressAnalysis()
-    anal.run(arg.node_ip, arg.nproc, arg.runtime)
+    stress_analysis = StressAnalysis()
+    stress_analysis.run(arg.node_ip, arg.nproc, arg.runtime)
 
-    print(f"Number of Cassandra Stress tests: {len(anal.threads)}")
-    for i, process in enumerate(anal.results, start=1):
+    print(f"Number of Cassandra Stress tests: {len(stress_analysis.results)}")
+    for i, process in enumerate(stress_analysis.results, start=1):
         print(
             f"Cassandra Stress test {i} "
             f"started at: {process.start_time}, "
             f"ended at: {process.end_time}, "
             f"and total duration is: {process.duration}"
         )
-    print(f"Aggregation of Op rate: {anal.op_rate_sum}")
-    print(f"Average of Latency mean: {anal.avg_latency_mean}")
-    print(f"Average of Latency 99th percentile: {anal.avg_latency_99_percentile}")
+    print(f"Aggregation of Op rate: {stress_analysis.op_rate_sum}")
+    print(f"Average of Latency mean: {stress_analysis.avg_latency_mean}")
     print(
-        f"Standard deviation calculation of all Latency max results: {anal.stdev_latency_max}"
+        f"Average of Latency 99th percentile: {stress_analysis.avg_latency_99_percentile}"
+    )
+    print(
+        f"Standard deviation calculation of all Latency max results: {stress_analysis.stdev_latency_max}"
     )
 
 
