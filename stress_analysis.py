@@ -21,12 +21,19 @@ def arg_parse():
 
     if arg.runtime is None:
         arg.runtime = []
-    if arg.nproc != len(arg.runtime):
+    if len(arg.runtime) < arg.nproc:
         print(
-            "Runtime args is less than number of required processes. Missing values are supplemented with `10s`"
+            "The number of runtime arguments is less than the number of required processes. "
+            "Missing values will be supplemented with 10s."
         )
         while len(arg.runtime) < arg.nproc:
             arg.runtime.append("10s")
+    if len(arg.runtime) > arg.nproc:
+        print(
+            "The number of runtime arguments exceeds the number of required processes. "
+            "Excess values will be omitted."
+        )
+        arg.runtime = arg.runtim[: arg.nproc]
 
     return arg
 
