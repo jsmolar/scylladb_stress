@@ -46,13 +46,13 @@ class Runner:
 class Parser:
     """Parser class for stress test results"""
 
-    def __init__(self, out):
-        self.out = out
-        self._sanitize()
+    def __init__(self, data):
+        self.data = self._sanitize(data)
 
-    def _sanitize(self):
+    @staticmethod
+    def _sanitize(data):
         """Removes unused part of output, leaves only Results"""
-        self.out = re.sub(r".*Results:", "Results:", self.out, flags=re.DOTALL)
+        return re.sub(r".*Results:", "Results:", data, flags=re.DOTALL)
 
     def parse(self):
         """
@@ -63,7 +63,7 @@ class Parser:
         for field in dataclasses.fields(StressResult):
             field_name = field.name.replace("_", " ")
             value = re.search(
-                rf"\n{field_name}\s*:\s*([\d,.]+)", self.out, re.IGNORECASE
+                rf"\n{field_name}\s*:\s*([\d,.]+)", self.data, re.IGNORECASE
             ).group(1)
             value = float(value.replace(",", ""))
             setattr(result, field.name, value)
@@ -105,9 +105,9 @@ class StressAnalysis:
         """
         Runs stress tests in concurrent threads and waits until all threads terminates
         Args:
-             :param number: number of concurrent stress test runs
-             :param node_ip: ip of a node from nodetool output
-             :param process_runtime: specify the time to run, in seconds, minutes or hours
+            :param node_ip: ip of a node from nodetool output
+            :param nproc: number of concurrent stress test runs
+            :param process_runtime: specify the time to run, in seconds, minutes or hours
         """
         for i in range(nproc):
             t = threading.Thread(
@@ -178,7 +178,7 @@ def arg_parse():
         arg.runtime = []
     if arg.nproc != len(arg.runtime):
         print(
-            "Runtime args is less than number of required processes. Missing values are supplemented 2ith `10s`"
+            "Runtime args is less than number of required processes. Missing values are supplemented with `10s`"
         )
         while len(arg.runtime) < arg.nproc:
             arg.runtime.append("10s")
