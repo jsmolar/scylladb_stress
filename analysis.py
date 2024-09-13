@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from subprocess import CalledProcessError
 
-from parser import StressResult, Parser
+from parser import StressResult, parse
 from runner import Runner
 
 
@@ -48,10 +48,10 @@ class StressAnalysis:
     def _start_test(self, node_ip, duration):
         """Calls runner to run cassandra stress test and saves parsed results and time marks"""
         start_time = datetime.now()
-        stress_result = Runner.run(node_ip, duration)
+        stdout = Runner.run(node_ip, duration)
         end_time = datetime.now()
 
-        result = StressRun(Parser(stress_result).parse(), start_time, end_time)
+        result = StressRun(parse(stdout), start_time, end_time)
         with lock:
             self.results.append(result)
 
@@ -70,13 +70,12 @@ class StressAnalysis:
                 for i in range(nproc)
             ]
 
-            # Wait for all threads to complete and check for exceptions
             for future in concurrent.futures.as_completed(futures):
                 try:
                     future.result()  # Raises any exception thrown in the thread
                 except CalledProcessError as e:
-                    print(f"Exception occurred in one of the threads: {e}")
-                    raise
+                    print(f"Subprocess Exception occurred. Error output: {e.stderr}")
+                    raise e
 
         self.done = True
 
