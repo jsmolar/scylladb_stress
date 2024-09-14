@@ -33,7 +33,7 @@ def arg_parse():
             "The number of runtime arguments exceeds the number of required processes. "
             "Excess values will be omitted."
         )
-        arg.runtime = arg.runtim[: arg.nproc]
+        arg.runtime = arg.runtime[: arg.nproc]
 
     return arg
 
@@ -47,8 +47,8 @@ def main():
     for i, process in enumerate(stress_analysis.results, start=1):
         print(
             f"Cassandra Stress test {i} "
-            f"started at: {process.start_time}, "
-            f"ended at: {process.end_time}, "
+            f"started at: {process.start_time.strftime("%H:%M:%S")}, "
+            f"ended at: {process.end_time.strftime("%H:%M:%S")}, "
             f"and total duration is: {process.duration}"
         )
     print(f"Aggregation of Op rate: {stress_analysis.op_rate_sum}")

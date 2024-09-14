@@ -5,8 +5,8 @@ from dataclasses import dataclass
 from datetime import datetime
 from subprocess import CalledProcessError
 
+import runner
 from parser import StressResult, parse
-from runner import Runner
 
 
 @dataclass
@@ -48,7 +48,7 @@ class StressAnalysis:
     def _start_test(self, node_ip, duration):
         """Calls runner to run cassandra stress test and saves parsed results and time marks"""
         start_time = datetime.now()
-        stdout = Runner.run(node_ip, duration)
+        stdout = runner.run(node_ip, duration)
         end_time = datetime.now()
 
         result = StressRun(parse(stdout), start_time, end_time)
